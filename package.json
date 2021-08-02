@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/Julietmtl/tinyapp/issues"
   },
-  "homepage": "https://github.com/Julietmtl/tinyapp#readme"
+  "homepage": "https://github.com/Julietmtl/tinyapp#readme",
+  "dependencies": {
+    "express": "^4.17.1"
+  }
 }
