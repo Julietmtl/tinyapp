@@ -43,10 +43,12 @@ app.post('/register', (req, res) => {
   
   const newID = Math.random().toString(20).substr(2, 6);
 
+  //if new user puts in empty strings it should return 400 code
   if (req.body.email === "" || req.body.password === "") {
     res.sendStatus(400);
   }
 
+  //if new user already had existing email should return 400 code
   for (let user in users) {
     if (req.body.email === users[user].email) {
       res.sendStatus(400)
@@ -122,11 +124,18 @@ app.post('/urls/:shortURL/delete', (req, res) => {
   res.redirect('/urls');
 })
 
-app.post("/login", (req, res) => {
-  const user_id = req.body.user_id;
-  res.cookie("user_id", user_id)
-  res.redirect('/urls');
-})
+app.get("/login", (req, res) => {
+  const userid = req.cookies["user_id"]
+  const user = users[userid]
+  const templateVars = { urls: urlDatabase, user: user};
+  res.render("urls_login", templateVars)
+});
+
+// app.post("/login", (req, res) => {
+//   const user_id = req.body.user_id;
+//   res.cookie("user_id", user_id)
+//   res.redirect('/urls');
+// })
 
 app.post("/logout", (req, res) => {
   res.clearCookie("user_id");
