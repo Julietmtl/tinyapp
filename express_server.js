@@ -21,7 +21,7 @@ const users = {
   "userRandomID": {
     id: "userRandomID", 
     email: "user@example.com", 
-    password: "purple-monkey-dinosaur"
+    password: "password"
   },
  "user2RandomID": {
     id: "user2RandomID", 
@@ -127,15 +127,33 @@ app.post('/urls/:shortURL/delete', (req, res) => {
 app.get("/login", (req, res) => {
   const userid = req.cookies["user_id"]
   const user = users[userid]
-  const templateVars = { urls: urlDatabase, user: user};
+  const templateVars = { user: user};
   res.render("urls_login", templateVars)
 });
 
-// app.post("/login", (req, res) => {
-//   const user_id = req.body.user_id;
-//   res.cookie("user_id", user_id)
-//   res.redirect('/urls');
-// })
+app.post("/login", (req, res) => { 
+  let foundUser;
+  //uses the new email and password fields, and sets an appropriate user_id cookie on successful login
+  for (let user in users) {
+    //If a user with that e-mail cannot be found, return a response with a 403 status code.
+    if (req.body.email === users[user].email) {
+      foundUser = users[user]
+      //If a user with that e-mail address is located, compare the password given in the form with the existing user's password. 
+      //If it does not match, return a response with a 403 status code.
+    }
+  }
+  if (!foundUser) {
+    res.sendStatus(403);
+  }
+    if (req.body.password !== foundUser.password) {
+      res.sendStatus(403) 
+    }
+
+      //If both checks pass, set the user_id cookie with the matching user's random ID, then redirect to /urls.
+
+    res.cookie("user_id", foundUser.id)
+    res.redirect('/urls');
+})
 
 app.post("/logout", (req, res) => {
   res.clearCookie("user_id");
@@ -158,8 +176,6 @@ app.get("/set", (req, res) => {
  app.get("/fetch", (req, res) => {
   res.send(`a = ${a}`);
  });
-
-
 
 
 app.listen(PORT, () => {

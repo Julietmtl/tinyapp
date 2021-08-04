@@ -10,21 +10,20 @@
 </head>
 <body> 
 <%- include("partials/_header") %>
-
+<h3>Login</h3>
 <section>
   <main>
-    <div class="door"></div>
+    <div class="door">
+    </div>
   </main>
 </section>
 <section>
   <form action="/login" method="POST">
-  <label for="email"> Email address:</label>
-  <input type="email" name=email>
-  <div>
-    <label for="password"> Password:</label>
-    <input type=password name=password>
-  </div>
-  <div> <input type="submit"> </div>
+      <label for="email"> Email address:</label>
+      <input type="email" name="email" placeholder="Enter email">
+      <label for="password"> Password:</label>
+      <input type=password name=password placeholder="Password"> 
+      <button type="submit" class="btn btn-primary">Login</button>
 </form>
 
 </section>

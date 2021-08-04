@@ -10,6 +10,7 @@
 </head>
 <body> 
 <%- include("partials/_header") %>
+<h3>Create Account</h3>
 
 <section>
   <main>
@@ -18,13 +19,11 @@
 </section>
 <section>
   <form action="/register" method="POST">
-  <label for="email"> Email address:</label>
-  <input type="email" name=email>
-  <div>
-    <label for="password"> Password:</label>
-    <input type=password name=password>
-  </div>
-  <div> <input type="submit"> </div>
+      <label for="email"> Email address:</label>
+      <input type="email" name=email>
+      <label for="password"> Password:</label>
+      <input type=password name=password>
+      <button type="submit" class="btn btn-primary">Register</button>
 </form>
 
 </section>
