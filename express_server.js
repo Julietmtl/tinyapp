@@ -8,9 +8,6 @@ const cookieParser = require("cookie-parser");
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser())
 
-function generateRandomString() {
-  return  Math.random().toString(20).substr(2, 6)
-}
 
 app.set("view engine", "ejs");
 
@@ -81,8 +78,10 @@ app.get("/set", (req, res) => {
  });
 
  app.post("/urls", (req, res) => {
-  console.log(req.body);
-  res.send("Ok");        
+  const longURL = req.body.longURL;
+  const createShortURL = Math.random().toString(20).substr(2, 6);
+  urlDatabase[createShortURL] = longURL;
+  res.redirect("/urls");        
 });
 
 app.post('/urls/:shortURL/delete', (req, res) => {
