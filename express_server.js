@@ -42,6 +42,16 @@ app.post('/register', (req, res) => {
   //email and password.
   
   const newID = Math.random().toString(20).substr(2, 6);
+
+  if (req.body.email === "" || req.body.password === "") {
+    res.sendStatus(400);
+  }
+
+  for (let user in users) {
+    if (req.body.email === users[user].email) {
+      res.sendStatus(400)
+    }
+  }
   
   const userObject = {
     id: newID,
@@ -49,9 +59,6 @@ app.post('/register', (req, res) => {
     password: req.body.password
   }
     users[newID] = userObject
-
-
-
   
   //After adding the user, set a user_id cookie containing the user's newly generated ID.
 
