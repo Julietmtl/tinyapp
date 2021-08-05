@@ -9,6 +9,12 @@ app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser())
 //const { createNewUser } = require("./helpers/authenticationHelpers")
 
+// app.use(cookieSession({
+//   name:'session',
+//   keys:['key1', 'key2']
+// }))
+//const userID = req.session.userID
+//req.session = null to clear session
 
 app.set("view engine", "ejs");
 
@@ -24,8 +30,8 @@ const urlDatabase = {
 };
 
 const users = { 
-  "userRandomID": {
-    id: "userRandomID", 
+  "aJ48lW": {
+    id: "aJ48lW", 
     email: "user@example.com", 
     password: "password"
   },
@@ -78,6 +84,16 @@ app.post('/register', (req, res) => {
   
 })
 
+const urlsForUser = function(id) {
+  //const id = req.cookies["user_id"];
+  let usersURL = [];
+  for (let shortURL in urlDatabase) {
+    if(urlDatabase[shortURL].userID === id) {
+      usersURL[shortURL] = urlDatabase[shortURL].longURL
+    }
+  }
+  return usersURL;
+};
 
 app.get("/", (req, res) => {
   res.send("Hello!");
@@ -86,7 +102,8 @@ app.get("/", (req, res) => {
 app.get("/urls", (req, res) => {
   const userid = req.cookies["user_id"]
   const user = users[userid]
-  const templateVars = { urls: urlDatabase, user: user};
+  const usersURL = urlsForUser(userid)
+  const templateVars = { urls: usersURL, user: user};
   res.render("urls_index", templateVars)
 });
 
@@ -127,19 +144,29 @@ app.get("/u/:shortURL", (req, res) => {
   res.redirect(longURL);
 });
 
-
+//this is the post for editing the long urls
 app.post("/urls/:shortURL", (req, res) => {
   const uniqueShortURL = req.params.shortURL;
   const longURL = req.body.longURL;
-  urlDatabase[uniqueShortURL].longURL = longURL;
-  res.redirect('/urls')
-})
+  const userid = req.cookies["user_id"]
+  if (userid === urlDatabase[uniqueShortURL].userID) {
+    urlDatabase[uniqueShortURL].longURL = longURL;
+    res.redirect('/urls')
+  } else {
+    res.status(403).send("<html><title>Error</title><body>You are not authorized to do that!</body></html></html>");
+  }
+});
 
 app.post('/urls/:shortURL/delete', (req, res) => {
   const shortURL = req.params.shortURL;
+  const userid = req.cookies["user_id"]
+  const user = users[userid];
+  if (!user) {
+    return res.status(500).send({ Error: 'Only the creator of the URL can delete the link!' })
+  }
   delete urlDatabase[shortURL];
   res.redirect('/urls');
-})
+});
 
 app.get("/login", (req, res) => {
   const userid = req.cookies["user_id"]
@@ -164,10 +191,10 @@ app.post("/login", (req, res) => {
     }
   }
   if (!foundUser) {
-    res.sendStatus(403);
+    res.status(403).send("<html><title>Error</title><body>No user found!</body></html></html>");
   }
     if (req.body.password !== foundUser.password) {
-      res.sendStatus(403) 
+      res.status(403).send("<html><title>Error</title><body>Password Invalid!</body></html></html>");
     }
 
       //If both checks pass, set the user_id cookie with the matching user's random ID, then redirect to /urls.
