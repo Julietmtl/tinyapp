@@ -5,6 +5,8 @@ const PORT = 8080;
 
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
+const bcrypt = require('bcryptjs');
+const { hash } = require("bcryptjs");
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieParser())
 //const { createNewUser } = require("./helpers/authenticationHelpers")
@@ -29,16 +31,19 @@ const urlDatabase = {
   }
 };
 
+const password1 = bcrypt.hashSync("password", 10);
+const password2 = bcrypt.hashSync("dishwasher-funk", 10)
+
 const users = { 
   "aJ48lW": {
     id: "aJ48lW", 
     email: "user@example.com", 
-    password: "password"
+    password: password1
   },
  "user2RandomID": {
     id: "user2RandomID", 
     email: "user2@example.com", 
-    password: "dishwasher-funk"
+    password: password2
   }
 }
 
@@ -69,13 +74,19 @@ app.post('/register', (req, res) => {
       res.sendStatus(400)
     }
   }
+  //new we create a new user back into our database of users
+  const plainTextPassword = req.body.password;
+  const hashedPassword = bcrypt.hashSync(plainTextPassword, 10)
   
   const userObject = {
     id: newID,
     email: req.body.email,
-    password: req.body.password
+    password: hashedPassword
   }
     users[newID] = userObject
+
+    console.log(userObject)
+    console.log(users)
   
   //After adding the user, set a user_id cookie containing the user's newly generated ID.
 
@@ -181,6 +192,7 @@ app.get("/login", (req, res) => {
 
 app.post("/login", (req, res) => { 
   let foundUser;
+  console.log("users: ", users)
   //uses the new email and password fields, and sets an appropriate user_id cookie on successful login
   for (let user in users) {
     //If a user with that e-mail cannot be found, return a response with a 403 status code.
@@ -191,17 +203,21 @@ app.post("/login", (req, res) => {
     }
   }
   if (!foundUser) {
-    res.status(403).send("<html><title>Error</title><body>No user found!</body></html></html>");
+    return res.status(403).send("<html><title>Error</title><body>No user found!</body></html></html>");
   }
-    if (req.body.password !== foundUser.password) {
-      res.status(403).send("<html><title>Error</title><body>Password Invalid!</body></html></html>");
+    bcrypt.compare(req.body.password, foundUser.password, (err, success) => {
+      // if passwords did not match
+      if (!success) {
+        return res.status(403).send("<html><title>Error</title><body>Password Invalid!</body></html></html>");
     }
 
       //If both checks pass, set the user_id cookie with the matching user's random ID, then redirect to /urls.
 
     res.cookie("user_id", foundUser.id)
     res.redirect('/urls');
-})
+  })
+});
+
 
 app.post("/logout", (req, res) => {
   res.clearCookie("user_id");
