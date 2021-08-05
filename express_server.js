@@ -13,8 +13,14 @@ app.use(cookieParser())
 app.set("view engine", "ejs");
 
 const urlDatabase = {
-  "b2xVn2": "http://www.lighthouselabs.ca",
-  "9sm5xK": "http://www.google.com"
+  b6UTxQ: {
+      longURL: "https://www.tsn.ca",
+      userID: "aJ48lW"
+  },
+  i3BoGr: {
+      longURL: "https://www.google.ca",
+      userID: "aJ48lW"
+  }
 };
 
 const users = { 
@@ -32,8 +38,11 @@ const users = {
 
 app.get('/register', (req, res) => {
   const userid = req.cookies["user_id"]
+  if (userid) {
+    res.redirect('/urls')
+  }
   const user = users[userid]
-  const templateVars = { urls: urlDatabase, user: user};
+  const templateVars = { user: user};
   res.render("urls_register", templateVars)
 })
 
@@ -82,12 +91,17 @@ app.get("/urls", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
- const longURL = req.body.longURL;
- if (longURL) {
-  const createShortURL = Math.random().toString(20).substr(2, 6);
-  urlDatabase[createShortURL] = longURL;
- }
- res.redirect("/urls");        
+  const userid = req.cookies["user_id"]
+  if (!userid) {
+    console.log("Visitor is not logged in.")
+    res.redirect('/login');
+  }
+ const newLongURL = req.body.longURL;
+ if (newLongURL) {
+  const shortURL = Math.random().toString(20).substr(2, 6);
+  urlDatabase[shortURL] = { longURL: newLongURL, userID: userid } 
+  res.redirect(`/urls/${shortURL}`);
+ };    
 });
 
 app.get("/urls/new", (req, res) => {
@@ -101,12 +115,15 @@ app.get("/urls/new", (req, res) => {
 app.get("/urls/:shortURL", (req, res) => {
   const userid = req.cookies["user_id"]
   const user = users[userid]
-  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], user: user};
+  const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user: user};
   res.render("urls_show", templateVars)
 });
 
 app.get("/u/:shortURL", (req, res) => {
-  const longURL = urlDatabase[req.params.shortURL];
+  if (!urlDatabase[req.params.shortURL]) {
+    res.status(500).send({ error: 'Something failed!' }) /// double check this...Basic Permission Features
+  }
+  const longURL = urlDatabase[req.params.shortURL]["longURL"];
   res.redirect(longURL);
 });
 
@@ -114,7 +131,7 @@ app.get("/u/:shortURL", (req, res) => {
 app.post("/urls/:shortURL", (req, res) => {
   const uniqueShortURL = req.params.shortURL;
   const longURL = req.body.longURL;
-  urlDatabase[uniqueShortURL] = longURL;
+  urlDatabase[uniqueShortURL].longURL = longURL;
   res.redirect('/urls')
 })
 
@@ -126,6 +143,10 @@ app.post('/urls/:shortURL/delete', (req, res) => {
 
 app.get("/login", (req, res) => {
   const userid = req.cookies["user_id"]
+  if (userid) {
+    res.redirect('/urls')
+  }
+
   const user = users[userid]
   const templateVars = { user: user};
   res.render("urls_login", templateVars)
