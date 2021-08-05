@@ -1,25 +1,23 @@
-
 const express = require("express");
 const app = express();
 const PORT = 8080;
 
 const bodyParser = require("body-parser");
-const cookieParser = require("cookie-parser");
+const cookieSession = require("cookie-session");
 const bcrypt = require('bcryptjs');
 const { hash } = require("bcryptjs");
 app.use(bodyParser.urlencoded({extended: true}));
-app.use(cookieParser())
-//const { createNewUser } = require("./helpers/authenticationHelpers")
+const { getUserByEmail } = require("./helpers/helpers")
 
-// app.use(cookieSession({
-//   name:'session',
-//   keys:['key1', 'key2']
-// }))
-//const userID = req.session.userID
-//req.session = null to clear session
+app.use(cookieSession({
+  name:'session',
+  keys:['key1', 'key2']
+}))
+
 
 app.set("view engine", "ejs");
 
+//////////////////////////////////////////////////////////////////////////////////////////////////////
 const urlDatabase = {
   b6UTxQ: {
       longURL: "https://www.tsn.ca",
@@ -30,7 +28,7 @@ const urlDatabase = {
       userID: "aJ48lW"
   }
 };
-
+//////////////////////////////////////////////////////////////////////////////////////////////////////
 const password1 = bcrypt.hashSync("password", 10);
 const password2 = bcrypt.hashSync("dishwasher-funk", 10)
 
@@ -46,9 +44,9 @@ const users = {
     password: password2
   }
 }
-
+////////////////////////////////////////////////////////////////////////////////////////////////
 app.get('/register', (req, res) => {
-  const userid = req.cookies["user_id"]
+  const userid = req.session["user_id"]
   if (userid) {
     res.redirect('/urls')
   }
@@ -60,27 +58,26 @@ app.get('/register', (req, res) => {
 app.post('/register', (req, res) => {
   //add a new user object to the global users object. should include the user's id, 
   //email and password.
-  
+  const email = req.body.email
   const newID = Math.random().toString(20).substr(2, 6);
 
   //if new user puts in empty strings it should return 400 code
-  if (req.body.email === "" || req.body.password === "") {
-    res.sendStatus(400);
+  if (email === "" || req.body.password === "") {
+    res.status(400).send("<html><title>Error</title><body>Please register with an email and password.</body></html></html>")
   }
 
   //if new user already had existing email should return 400 code
-  for (let user in users) {
-    if (req.body.email === users[user].email) {
-      res.sendStatus(400)
+  const foundUser = getUserByEmail(email, users)
+    if (foundUser) {
+      res.status(400).send("<html><title>Error</title><body>This email is already in our database!</body></html></html>")
     }
-  }
   //new we create a new user back into our database of users
   const plainTextPassword = req.body.password;
   const hashedPassword = bcrypt.hashSync(plainTextPassword, 10)
   
   const userObject = {
     id: newID,
-    email: req.body.email,
+    email: email,
     password: hashedPassword
   }
     users[newID] = userObject
@@ -89,14 +86,14 @@ app.post('/register', (req, res) => {
     console.log(users)
   
   //After adding the user, set a user_id cookie containing the user's newly generated ID.
-
-    res.cookie("user_id", userObject.id)
+///////////////////////////////////////////////
+    req.session.user_id = userObject.id;
     return res.redirect('/urls')
   
 })
 
 const urlsForUser = function(id) {
-  //const id = req.cookies["user_id"];
+  //const id = req.session["user_id"];
   let usersURL = [];
   for (let shortURL in urlDatabase) {
     if(urlDatabase[shortURL].userID === id) {
@@ -111,7 +108,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  const userid = req.cookies["user_id"]
+  const userid = req.session["user_id"]
   const user = users[userid]
   const usersURL = urlsForUser(userid)
   const templateVars = { urls: usersURL, user: user};
@@ -119,7 +116,7 @@ app.get("/urls", (req, res) => {
 });
 
 app.post("/urls", (req, res) => {
-  const userid = req.cookies["user_id"]
+  const userid = req.session["user_id"]
   if (!userid) {
     console.log("Visitor is not logged in.")
     res.redirect('/login');
@@ -133,7 +130,7 @@ app.post("/urls", (req, res) => {
 });
 
 app.get("/urls/new", (req, res) => {
-  const userid = req.cookies["user_id"]
+  const userid = req.session["user_id"]
   const user = users[userid]
   const templateVars = { user: user };
   res.render("urls_new", templateVars);
@@ -141,7 +138,7 @@ app.get("/urls/new", (req, res) => {
 
 
 app.get("/urls/:shortURL", (req, res) => {
-  const userid = req.cookies["user_id"]
+  const userid = req.session["user_id"]
   const user = users[userid]
   const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user: user};
   res.render("urls_show", templateVars)
@@ -159,7 +156,7 @@ app.get("/u/:shortURL", (req, res) => {
 app.post("/urls/:shortURL", (req, res) => {
   const uniqueShortURL = req.params.shortURL;
   const longURL = req.body.longURL;
-  const userid = req.cookies["user_id"]
+  const userid = req.session["user_id"]
   if (userid === urlDatabase[uniqueShortURL].userID) {
     urlDatabase[uniqueShortURL].longURL = longURL;
     res.redirect('/urls')
@@ -170,7 +167,7 @@ app.post("/urls/:shortURL", (req, res) => {
 
 app.post('/urls/:shortURL/delete', (req, res) => {
   const shortURL = req.params.shortURL;
-  const userid = req.cookies["user_id"]
+  const userid = req.session["user_id"]
   const user = users[userid];
   if (!user) {
     return res.status(500).send({ Error: 'Only the creator of the URL can delete the link!' })
@@ -180,7 +177,7 @@ app.post('/urls/:shortURL/delete', (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  const userid = req.cookies["user_id"]
+  const userid = req.session["user_id"]
   if (userid) {
     res.redirect('/urls')
   }
@@ -191,36 +188,29 @@ app.get("/login", (req, res) => {
 });
 
 app.post("/login", (req, res) => { 
-  let foundUser;
   console.log("users: ", users)
-  //uses the new email and password fields, and sets an appropriate user_id cookie on successful login
-  for (let user in users) {
-    //If a user with that e-mail cannot be found, return a response with a 403 status code.
-    if (req.body.email === users[user].email) {
-      foundUser = users[user]
-      //If a user with that e-mail address is located, compare the password given in the form with the existing user's password. 
-      //If it does not match, return a response with a 403 status code.
-    }
-  }
+  const foundUser = getUserByEmail(req.body.email, users)
+  console.log("foundUser: ", foundUser)
   if (!foundUser) {
-    return res.status(403).send("<html><title>Error</title><body>No user found!</body></html></html>");
+    //If a user with that e-mail cannot be found, return a response with a 403 status code.
+    return res.sendStatus(403).send("<html><title>Error</title><body>No user found!</body></html></html>");
   }
-    bcrypt.compare(req.body.password, foundUser.password, (err, success) => {
-      // if passwords did not match
-      if (!success) {
-        return res.status(403).send("<html><title>Error</title><body>Password Invalid!</body></html></html>");
-    }
-
-      //If both checks pass, set the user_id cookie with the matching user's random ID, then redirect to /urls.
-
-    res.cookie("user_id", foundUser.id)
-    res.redirect('/urls');
-  })
+  bcrypt.compare(req.body.password, foundUser.password, (err, success) => {
+    //If a user with that e-mail address is located, compare the password given in the form with the existing user's password. 
+    // if passwords did not match return a response with a 403 status code.
+    if (!success) {
+      return res.status(403).send("<html><title>Error</title><body>Password Invalid!</body></html></html>");
+    } 
+    //uses the new email and password fields, and sets an appropriate user_id cookie on successful login
+    //If both checks pass, set the user_id cookie with the matching user's random ID, then redirect to /urls.
+    req.session.user_id = foundUser.id;
+         res.redirect('/urls');
+   })  
 });
 
 
 app.post("/logout", (req, res) => {
-  res.clearCookie("user_id");
+  req.session = null;
   res.redirect('/urls');
 })
 
