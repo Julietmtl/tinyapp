@@ -1,20 +1,20 @@
-const express = require("express");
+const express = require('express');
 const app = express();
 const PORT = 8080;
 
-const bodyParser = require("body-parser");
-const cookieSession = require("cookie-session");
+const bodyParser = require('body-parser');
+const cookieSession = require('cookie-session');
 const bcrypt = require('bcryptjs');
-const { hash } = require("bcryptjs");
+const { hash } = require('bcryptjs');
 app.use(bodyParser.urlencoded({extended: true}));
-const { getUserByEmail } = require("./helpers");
+const { getUserByEmail } = require('./helpers');
 
 app.use(cookieSession({
   name:'session',
   keys:['key1', 'key2']
 }));
 
-app.set("view engine", "ejs");
+app.set('view engine', 'ejs');
 
 ////////////////////////////////////////// URL DATABASE //////////////////////////////////////////////////
 const urlDatabase = {
@@ -28,8 +28,8 @@ const urlDatabase = {
   }
 };
 ///////////////////////////////////////////// USERS DATABASE /////////////////////////////////////////////
-const password1 = bcrypt.hashSync("password", 10);
-const password2 = bcrypt.hashSync("dishwasher-funk", 10);
+const password1 = bcrypt.hashSync('password', 10);
+const password2 = bcrypt.hashSync('dishwasher-funk', 10);
 
 const users = {
   "aJ48lW": {
@@ -44,14 +44,22 @@ const users = {
   }
 };
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////
+app.get('/', (req, res) => {
+  const userid = req.session['user_id'];
+  if (userid) {
+    res.redirect('/urls');
+  }
+  res.redirect('/login')
+});
+
 app.get('/register', (req, res) => {
-  const userid = req.session["user_id"];
+  const userid = req.session['user_id'];
   if (userid) {
     res.redirect('/urls');
   }
   const user = users[userid];
   const templateVars = { user: user};
-  res.render("urls_register", templateVars);
+  res.render('urls_register', templateVars);
 });
 
 app.post('/register', (req, res) => {
@@ -98,19 +106,19 @@ const urlsForUser = function(id) {
 };
 
 //the cookie session id is matched with our URL database and will show all the URLs belonging to the id matched to the session id
-app.get("/urls", (req, res) => {
-  const userid = req.session["user_id"];
+app.get('/urls', (req, res) => {
+  const userid = req.session['user_id'];
   const user = users[userid];
   const usersURL = urlsForUser(userid);
   const templateVars = { urls: usersURL, user: user};
-  res.render("urls_index", templateVars);
+  res.render('urls_index', templateVars);
 });
 
 
-app.post("/urls", (req, res) => {
-  const userid = req.session["user_id"];
+app.post('/urls', (req, res) => {
+  const userid = req.session['user_id'];
   if (!userid) {
-    console.log("Visitor is not logged in.");
+    console.log('Visitor is not logged in.');
     res.redirect('/login');
   }
   // A user that is logged in can create a new long and short url and it will appear on the /urls page
@@ -123,20 +131,20 @@ app.post("/urls", (req, res) => {
 });
 
 //create new URLs
-app.get("/urls/new", (req, res) => {
-  const userid = req.session["user_id"];
+app.get('/urls/new', (req, res) => {
+  const userid = req.session['user_id'];
   const user = users[userid];
 //if user is not logged it, they will be redirected to the login page
   if (!userid) {
-    console.log("No user logged in.")
+    console.log('No user logged in.')
     res.redirect('/login')
   }
  //otherwise this page will show up for the users 
   const templateVars = { user: user };
-  res.render("urls_new", templateVars);
+  res.render('urls_new', templateVars);
 });
 
-app.get("/urls/:shortURL", (req, res) => {
+app.get('/urls/:shortURL', (req, res) => {
   const userid = req.session["user_id"];
   const user = users[userid];
   //check to see if a shortURL exists, if not, there will be an error message
@@ -146,36 +154,38 @@ app.get("/urls/:shortURL", (req, res) => {
   //if user owns this shorturl based on the urldatabase then it can be shown
   if (userid === urlDatabase[req.params.shortURL].userID) {
     const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user: user};
-    res.render("urls_show", templateVars);
+    res.render('urls_show', templateVars);
   }
   //if the short URL does not belong to the logged in user, or has no logged in person, it will show an error.
   res.status(404).send("<html><title>Error</title><body>Only the correct logged in user will be able to view this.</body></html></html>");
 });
 
-app.get("/u/:shortURL", (req, res) => {
+app.get('/u/:shortURL', (req, res) => {
   if (!urlDatabase[req.params.shortURL]) {
     res.status(500).send("<html><title>Error</title><body>Try using another URL. This one does not exist.</body></html></html>");
   }
-  const longURL = urlDatabase[req.params.shortURL]["longURL"];
+  const longURL = urlDatabase[req.params.shortURL]['longURL'];
   res.redirect(longURL);
 });
 
 //this is the post for editing the long urls
-app.post("/urls/:shortURL", (req, res) => {
+app.post('/urls/:shortURL', (req, res) => {
   const uniqueShortURL = req.params.shortURL;
   const longURL = req.body.longURL;
-  const userid = req.session["user_id"];
+  const userid = req.session['user_id'];
+//only the onwner of the shortURL can make changes to it and then will be redirected to /urls
   if (userid === urlDatabase[uniqueShortURL].userID) {
     urlDatabase[uniqueShortURL].longURL = longURL;
     res.redirect('/urls');
   } else {
+//non-owners will be redirected to an error page
     res.status(403).send("<html><title>Error</title><body>You are not authorized to do that!</body></html></html>");
   }
 });
 
 app.post('/urls/:shortURL/delete', (req, res) => {
   const shortURL = req.params.shortURL;
-  const userid = req.session["user_id"];
+  const userid = req.session['user_id'];
   const user = users[userid];
   if (!user) {
     return res.status(500).send({ Error: 'Only the creator of the URL can delete the link!' });
@@ -184,17 +194,17 @@ app.post('/urls/:shortURL/delete', (req, res) => {
   res.redirect('/urls');
 });
 
-app.get("/login", (req, res) => {
-  const userid = req.session["user_id"];
+app.get('/login', (req, res) => {
+  const userid = req.session['user_id'];
   if (userid) {
     res.redirect('/urls');
   }
   const user = users[userid];
   const templateVars = { user: user};
-  res.render("urls_login", templateVars);
+  res.render('urls_login', templateVars);
 });
 
-app.post("/login", (req, res) => {
+app.post('/login', (req, res) => {
   const foundUser = getUserByEmail(req.body.email, users);
   if (!foundUser) {
     //If a user with that e-mail cannot be found, return a response with a 403 status code.
@@ -214,7 +224,7 @@ app.post("/login", (req, res) => {
 });
 
 
-app.post("/logout", (req, res) => {
+app.post('/logout', (req, res) => {
   req.session = null;
   res.redirect('/urls');
 });
