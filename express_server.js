@@ -1,14 +1,12 @@
 const express = require('express');
 const app = express();
 const PORT = 8080;
-
 const bodyParser = require('body-parser');
 const cookieSession = require('cookie-session');
 const bcrypt = require('bcryptjs');
 const { hash } = require('bcryptjs');
 app.use(bodyParser.urlencoded({extended: true}));
 const { getUserByEmail } = require('./helpers');
-
 app.use(cookieSession({
   name:'session',
   keys:['key1', 'key2']
@@ -66,12 +64,10 @@ app.post('/register', (req, res) => {
   //add a new user object to the global users object. should include the user's id, email and password.
   const email = req.body.email;
   const newID = Math.random().toString(20).substr(2, 6);
-
   //if new user puts in empty strings it should return 400 code
   if (email === "" || req.body.password === "") {
     res.status(400).send("<html><title>Error</title><body>Please register with an email and password.</body></html></html>");
   }
-
   //if new user already had existing email should return 400 code
   const foundUser = getUserByEmail(email, users);
   if (foundUser) {
@@ -93,7 +89,6 @@ app.post('/register', (req, res) => {
   return res.redirect('/urls');
 });
 
-
 // created a function so we can match the cookie session user_id and display their respective URLs
 const urlsForUser = function(id) {
   let usersURL = [];
@@ -109,16 +104,18 @@ const urlsForUser = function(id) {
 app.get('/urls', (req, res) => {
   const userid = req.session['user_id'];
   const user = users[userid];
+  if (!user) {
+    return res.status(400).send("<html><title>Error</title><body>Please register or login.</body></html></html>")
+  }
   const usersURL = urlsForUser(userid);
   const templateVars = { urls: usersURL, user: user};
   res.render('urls_index', templateVars);
 });
 
-
 app.post('/urls', (req, res) => {
   const userid = req.session['user_id'];
   if (!userid) {
-    console.log('Visitor is not logged in.');
+  //if a client is not logged in, they will be redirected to the login page
     res.redirect('/login');
   }
   // A user that is logged in can create a new long and short url and it will appear on the /urls page
@@ -136,7 +133,6 @@ app.get('/urls/new', (req, res) => {
   const user = users[userid];
 //if user is not logged it, they will be redirected to the login page
   if (!userid) {
-    console.log('No user logged in.')
     res.redirect('/login')
   }
  //otherwise this page will show up for the users 
@@ -177,8 +173,11 @@ app.post('/urls/:shortURL', (req, res) => {
   if (userid === urlDatabase[uniqueShortURL].userID) {
     urlDatabase[uniqueShortURL].longURL = longURL;
     res.redirect('/urls');
+    //non-owners of this URL will be redirected
   } else {
-//non-owners will be redirected to an error page
+    res.status(403).send("<html><title>Error Non-Owner</title><body>You are not authorized to do that!</body></html></html>");
+  } 
+  if (!user) {
     res.status(403).send("<html><title>Error</title><body>You are not authorized to do that!</body></html></html>");
   }
 });
@@ -222,7 +221,6 @@ app.post('/login', (req, res) => {
     res.redirect('/urls');
   });
 });
-
 
 app.post('/logout', (req, res) => {
   req.session = null;
