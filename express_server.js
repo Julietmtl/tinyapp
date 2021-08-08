@@ -5,7 +5,7 @@ const bodyParser = require('body-parser');
 const cookieSession = require('cookie-session');
 const bcrypt = require('bcryptjs');
 const { hash } = require('bcryptjs');
-const { getUserByEmail } = require('./helpers');
+const { getUserByEmail, urlDatabase, users } = require('./helpers');
 
 app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieSession({
@@ -15,34 +15,6 @@ app.use(cookieSession({
 
 app.set('view engine', 'ejs');
 
-////////////////////////////////////////// URL DATABASE //////////////////////////////////////////////////
-const urlDatabase = {
-  b6UTxQ: {
-    longURL: "https://www.tsn.ca",
-    userID: "aJ48lW"
-  },
-  i3BoGr: {
-    longURL: "https://www.google.ca",
-    userID: "aJ48lW"
-  }
-};
-///////////////////////////////////////////// USERS DATABASE /////////////////////////////////////////////
-const password1 = bcrypt.hashSync('password', 10);
-const password2 = bcrypt.hashSync('dishwasher-funk', 10);
-
-const users = {
-  "aJ48lW": {
-    id: "aJ48lW",
-    email: "user@example.com",
-    password: password1
-  },
-  "user2RandomID": {
-    id: "user2RandomID",
-    email: "user2@example.com",
-    password: password2
-  }
-};
-////////////////////////////////////////////////////////////////////////////////////////////////////////////
 app.get('/', (req, res) => {
   const userid = req.session['user_id'];
   if (userid) {
@@ -172,7 +144,6 @@ app.post('/urls/:shortURL', (req, res) => {
   const longURL = req.body.longURL;
   const userid = req.session['user_id'];
   const matchedID = urlDatabase[uniqueShortURL].userID;
-  console.log(userid)
 //only the onwner of the shortURL can make changes to it and then will be redirected to /urls
  if (!userid) {
    res.status(403).send("No user is logged in.")
