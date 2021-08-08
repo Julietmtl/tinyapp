@@ -161,7 +161,7 @@ app.post('/urls/:shortURL/delete', (req, res) => {
   const shortURL = req.params.shortURL;
   const userid = req.session['user_id'];
   const user = users[userid];
-  const matchedID = urlDatabase[uniqueShortURL].userID;
+  const matchedID = urlDatabase[shortURL].userID;
   //If there is no logged in user, error message would appear.
   if (!user) {
     return res.status(403).send({ Error: 'Please log in to delete this link.' });
