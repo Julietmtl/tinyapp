@@ -5,8 +5,9 @@ const bodyParser = require('body-parser');
 const cookieSession = require('cookie-session');
 const bcrypt = require('bcryptjs');
 const { hash } = require('bcryptjs');
-app.use(bodyParser.urlencoded({extended: true}));
 const { getUserByEmail } = require('./helpers');
+
+app.use(bodyParser.urlencoded({extended: true}));
 app.use(cookieSession({
   name:'session',
   keys:['key1', 'key2']
@@ -108,7 +109,7 @@ app.get('/urls', (req, res) => {
     return res.status(400).send("<html><title>Error</title><body>Please register or login.</body></html></html>")
   }
   const usersURL = urlsForUser(userid);
-  const templateVars = { urls: usersURL, user: user};
+  const templateVars = { urls: usersURL, user: user}; ///change it back to usersURL
   res.render('urls_index', templateVars);
 });
 
@@ -141,7 +142,7 @@ app.get('/urls/new', (req, res) => {
 });
 
 app.get('/urls/:shortURL', (req, res) => {
-  const userid = req.session["user_id"];
+  const userid = req.session['user_id'];
   const user = users[userid];
   //check to see if a shortURL exists, if not, there will be an error message
   if (!urlDatabase[req.params.shortURL]) {
@@ -151,9 +152,10 @@ app.get('/urls/:shortURL', (req, res) => {
   if (userid === urlDatabase[req.params.shortURL].userID) {
     const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL].longURL, user: user};
     res.render('urls_show', templateVars);
-  }
+  } else {
   //if the short URL does not belong to the logged in user, or has no logged in person, it will show an error.
   res.status(404).send("<html><title>Error</title><body>Only the correct logged in user will be able to view this.</body></html></html>");
+  }
 });
 
 app.get('/u/:shortURL', (req, res) => {
@@ -169,29 +171,38 @@ app.post('/urls/:shortURL', (req, res) => {
   const uniqueShortURL = req.params.shortURL;
   const longURL = req.body.longURL;
   const userid = req.session['user_id'];
+  const matchedID = urlDatabase[uniqueShortURL].userID;
+  console.log(userid)
 //only the onwner of the shortURL can make changes to it and then will be redirected to /urls
-  if (userid === urlDatabase[uniqueShortURL].userID) {
+ if (!userid) {
+   res.status(403).send("No user is logged in.")
+ }
+  else { if (userid === matchedID) {
     urlDatabase[uniqueShortURL].longURL = longURL;
     res.redirect('/urls');
-    //non-owners of this URL will be redirected
+     //If there is no matching userid with the shortURL, and no logged in user and error message would appear.
   } else {
-    res.status(403).send("<html><title>Error Non-Owner</title><body>You are not authorized to do that!</body></html></html>");
-  } 
-  if (!user) {
-    res.status(403).send("<html><title>Error</title><body>You are not authorized to do that!</body></html></html>");
-  }
+    res.status(403).send("Page cannot be accessed if it is not the owner.");
+  }}
 });
 
 app.post('/urls/:shortURL/delete', (req, res) => {
   const shortURL = req.params.shortURL;
   const userid = req.session['user_id'];
   const user = users[userid];
+  const matchedID = urlDatabase[uniqueShortURL].userID;
+  //If there is no logged in user, error message would appear.
   if (!user) {
-    return res.status(500).send({ Error: 'Only the creator of the URL can delete the link!' });
-  }
-  delete urlDatabase[shortURL];
-  res.redirect('/urls');
-});
+    return res.status(403).send({ Error: 'Please log in to delete this link.' });
+    //Owner can delete.
+  } else { if (userid === matchedID) {
+    delete urlDatabase[shortURL];
+    res.redirect('/urls');
+    //Logged in user, but not the owner, error will appear.
+  } else {
+    res.status(403).send("Only the owner can delete this link.");
+  }}
+  });
 
 app.get('/login', (req, res) => {
   const userid = req.session['user_id'];
